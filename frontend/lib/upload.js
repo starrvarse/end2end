@@ -1,15 +1,16 @@
 import { generateKey, exportKey, encryptFile } from './crypto';
+import { getAuthHeaders } from './authStore';
 
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
 const API_BASE = '/api';
 
 /**
- * Upload a file with end-to-end encryption.
+ * Upload a file with end-to-end encryption (authenticated).
  * 1. Generate AES-256 key
  * 2. Encrypt the entire file client-side
  * 3. Split encrypted data into chunks
  * 4. Upload chunks to server
- * 5. Store key locally (never sent to server)
+ * 5. Return key for wrapping/sharing
  *
  * @param {File} file - The file to upload
  * @param {function} onProgress - Callback with progress percentage (0-100)
@@ -45,6 +46,7 @@ export async function uploadFile(file, onProgress) {
 
         const res = await fetch(`${API_BASE}/upload`, {
             method: 'POST',
+            headers: getAuthHeaders(),
             body: formData,
         });
 
@@ -53,7 +55,6 @@ export async function uploadFile(file, onProgress) {
             throw new Error(err.error || 'Chunk upload failed');
         }
 
-        // Progress: 10% for encryption + 80% for upload + 10% for merge
         const uploadProgress = 10 + Math.round(((chunkIndex + 1) / totalChunks) * 80);
         onProgress(uploadProgress);
     }
@@ -61,12 +62,15 @@ export async function uploadFile(file, onProgress) {
     // Step 4: Tell server to distribute chunks to devices
     const mergeRes = await fetch(`${API_BASE}/merge`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeaders(),
+        },
         body: JSON.stringify({
             fileId,
             fileName: file.name,
             totalChunks,
-            fileSize: file.size, // original size for display
+            fileSize: file.size,
             encrypted: true,
         }),
     });
@@ -82,10 +86,12 @@ export async function uploadFile(file, onProgress) {
 }
 
 /**
- * Fetch the list of uploaded files
+ * Fetch the list of uploaded files (authenticated)
  */
 export async function fetchFiles() {
-    const res = await fetch(`${API_BASE}/files`);
+    const res = await fetch(`${API_BASE}/files`, {
+        headers: getAuthHeaders(),
+    });
     if (!res.ok) throw new Error('Failed to fetch files');
     const data = await res.json();
     return data.files;

@@ -1,24 +1,27 @@
 import { Router } from 'express';
 import fs from 'fs';
 import path from 'path';
-import {
-    CHUNKS_DIR,
-    FILES_JSON,
-    readJSON,
-    writeJSON,
-    formatFileSize,
-} from '../utils/fileHelpers.js';
+import { CHUNKS_DIR } from '../utils/fileHelpers.js';
+import { authenticate } from '../middleware/auth.js';
+import prisma from '../utils/prisma.js';
 
 const router = Router();
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
+}
 
 /**
  * POST /merge
  * After all chunks are uploaded to the server temporarily,
  * distribute them to actual connected devices via WebSocket.
  * Each device stores chunks in its browser (IndexedDB).
- * Server only keeps metadata.
+ * Server only keeps metadata in Prisma DB.
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
     try {
         const { fileId, fileName, totalChunks, fileSize, encrypted } = req.body;
 
@@ -41,15 +44,15 @@ router.post('/', async (req, res) => {
         }
 
         // Prevent duplicates
-        const files = readJSON(FILES_JSON) || [];
-        if (files.some((f) => f.name === fileName)) {
+        const existingFile = await prisma.file.findFirst({ where: { name: fileName, ownerId: req.user.id } });
+        if (existingFile) {
             fs.rmSync(chunkDir, { recursive: true, force: true });
             return res.status(409).json({ error: `File "${fileName}" already exists` });
         }
 
         // Get connected devices
         const connectedDevices = req.app.get('connectedDevices');
-        const deviceList = Array.from(connectedDevices.entries()); // [ [deviceId, { socket }] ]
+        const deviceList = Array.from(connectedDevices.entries());
 
         if (deviceList.length === 0) {
             fs.rmSync(chunkDir, { recursive: true, force: true });
@@ -71,7 +74,6 @@ router.post('/', async (req, res) => {
             const [deviceId, deviceInfo] = deviceList[deviceIndex];
             const chunkData = fs.readFileSync(path.join(chunkDir, `${i}`));
 
-            // Send chunk to the device via WebSocket
             const promise = new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => reject(new Error(`Timeout sending chunk ${i} to ${deviceId}`)), 30000);
 
@@ -80,7 +82,7 @@ router.post('/', async (req, res) => {
                     fileName,
                     chunkIndex: i,
                     totalChunks: total,
-                    data: chunkData.toString('base64'), // Send as base64
+                    data: chunkData.toString('base64'),
                 }, (ack) => {
                     clearTimeout(timeout);
                     if (ack && ack.success) {
@@ -98,26 +100,24 @@ router.post('/', async (req, res) => {
         // Wait for all chunks to be delivered to devices
         await Promise.all(sendPromises);
 
-        // Save metadata (server only keeps the map, not the actual data)
-        const fileEntry = {
-            id: fileId,
-            name: fileName,
-            size: totalSize,
-            sizeFormatted: formatFileSize(totalSize),
-            totalChunks: total,
-            uploadDate: new Date().toISOString(),
-            chunkMap,
-            encrypted: !!encrypted,
-        };
+        // Save metadata to Prisma DB
+        const fileEntry = await prisma.file.create({
+            data: {
+                id: fileId,
+                name: fileName,
+                size: totalSize,
+                totalChunks: total,
+                encrypted: !!encrypted,
+                ownerId: req.user.id,
+                chunkMap: JSON.stringify(chunkMap),
+            },
+        });
 
-        files.push(fileEntry);
-        writeJSON(FILES_JSON, files);
-
-        // Delete temp chunks from server — data now lives on devices only
+        // Delete temp chunks from server
         fs.rmSync(chunkDir, { recursive: true, force: true });
 
         // Log distribution
-        console.log(`\n📦 "${fileName}" distributed to actual devices:`);
+        console.log(`\n"${fileName}" distributed to devices:`);
         const grouped = {};
         chunkMap.forEach((c) => {
             if (!grouped[c.deviceId]) grouped[c.deviceId] = [];
@@ -127,13 +127,22 @@ router.post('/', async (req, res) => {
             console.log(`   ${dev}: chunks [${chunks.join(', ')}]`);
         }
 
-        // Notify all clients to refresh the file list
+        // Notify all clients to refresh
         const io = req.app.get('io');
         io.emit('filesUpdated');
 
         res.json({
             message: `File distributed across ${deviceList.length} device(s)`,
-            file: fileEntry,
+            file: {
+                id: fileEntry.id,
+                name: fileEntry.name,
+                size: fileEntry.size,
+                sizeFormatted: formatFileSize(fileEntry.size),
+                totalChunks: fileEntry.totalChunks,
+                chunkMap,
+                encrypted: fileEntry.encrypted,
+                uploadDate: fileEntry.createdAt.toISOString(),
+            },
         });
     } catch (error) {
         console.error('Merge/distribute error:', error);

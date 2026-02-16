@@ -3,6 +3,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { CHUNKS_DIR, MAX_FILE_SIZE, CHUNK_SIZE } from '../utils/fileHelpers.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -14,10 +15,10 @@ const upload = multer({
 
 /**
  * POST /upload
- * Receive a single file chunk
+ * Receive a single file chunk (authenticated)
  * Body (multipart): chunk (file), chunkIndex, totalChunks, fileName, fileId, fileSize
  */
-router.post('/', upload.single('chunk'), (req, res) => {
+router.post('/', authenticate, upload.single('chunk'), (req, res) => {
     try {
         const { chunkIndex, totalChunks, fileName, fileId, fileSize } = req.body;
 

@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  username            String   @unique
+  avatarId            Int      @default(0)
+  passwordHash        String
+  publicKey           String?
+  encryptedPrivateKey String?
+  pbkdfSalt           String?
+  createdAt           DateTime @default(now())
+
+  // Relations
+  files              File[]
+  sentRequests       Connection[]   @relation("RequestsSent")
+  receivedRequests   Connection[]   @relation("RequestsReceived")
+  createdGroups      Group[]        @relation("GroupCreator")
+  groupMemberships   GroupMember[]
+  fileKeyShares      FileKeyShare[]
+  posts              Post[]
+  comments           Comment[]
+  likes              Like[]
+  refreshTokens      RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Connection {
+  id         String   @id @default(uuid())
+  requesterId String
+  receiverId  String
+  status      String   @default("pending") // pending, accepted, declined
+  createdAt   DateTime @default(now())
+
+  requester User @relation("RequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiver  User @relation("RequestsReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, receiverId])
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  avatarId  Int      @default(0)
+  creatorId String
+  createdAt DateTime @default(now())
+
+  creator  User          @relation("GroupCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  members  GroupMember[]
+  posts    Post[]
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  groupId String
+  userId  String
+  role    String @default("member") // admin, member
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model File {
+  id          String   @id
+  name        String
+  size        Int
+  totalChunks Int
+  encrypted   Boolean  @default(true)
+  ownerId     String
+  chunkMap    String   // JSON string
+  createdAt   DateTime @default(now())
+
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  keyShares FileKeyShare[]
+  posts     Post[]
+}
+
+model FileKeyShare {
+  id              String @id @default(uuid())
+  fileId          String
+  userId          String
+  encryptedAESKey String // RSA-OAEP encrypted AES key (base64)
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, userId])
+}
+
+model Post {
+  id            String   @id @default(uuid())
+  authorId      String
+  fileId        String?
+  caption       String?
+  visibility    String   @default("connections") // public, connections, group
+  groupId       String?
+  publicFileKey String?  // Plaintext AES key for public posts (intentional)
+  createdAt     DateTime @default(now())
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  file     File?     @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  group    Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  comments Comment[]
+  likes    Like[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}

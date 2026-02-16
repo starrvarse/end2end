@@ -1,34 +1,49 @@
 import { Router } from 'express';
-import { FILES_JSON, readJSON } from '../utils/fileHelpers.js';
+import prisma from '../utils/prisma.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
 /**
- * GET /download/:fileName
- * Collect chunks from actual devices via WebSocket and stream the reassembled file.
+ * GET /download/:fileId
+ * Collect chunks from devices via WebSocket and stream the reassembled file.
+ * Requires auth + file access (owner, key share, or public post).
  */
-router.get('/:fileName', async (req, res) => {
+router.get('/:fileId', authenticate, async (req, res) => {
     try {
-        const { fileName } = req.params;
+        const { fileId } = req.params;
 
-        if (!fileName) {
-            return res.status(400).json({ error: 'File name is required' });
+        if (!fileId) {
+            return res.status(400).json({ error: 'File ID is required' });
         }
 
-        const files = readJSON(FILES_JSON) || [];
-        const fileEntry = files.find((f) => f.name === fileName);
+        const fileEntry = await prisma.file.findUnique({ where: { id: fileId } });
 
         if (!fileEntry) {
             return res.status(404).json({ error: 'File not found' });
         }
 
+        // Check access: owner, has key share, or file is in a public post
+        const isOwner = fileEntry.ownerId === req.user.id;
+        const hasKeyShare = await prisma.fileKeyShare.findUnique({
+            where: { fileId_userId: { fileId, userId: req.user.id } },
+        });
+        const hasPublicPost = await prisma.post.findFirst({
+            where: { fileId, visibility: 'public' },
+        });
+
+        if (!isOwner && !hasKeyShare && !hasPublicPost) {
+            return res.status(403).json({ error: 'You do not have access to this file' });
+        }
+
         const connectedDevices = req.app.get('connectedDevices');
+        const chunkMap = JSON.parse(fileEntry.chunkMap);
 
         // Collect all chunks from devices in order
         const chunkBuffers = [];
 
         for (let i = 0; i < fileEntry.totalChunks; i++) {
-            const chunkInfo = fileEntry.chunkMap.find((c) => c.chunkIndex === i);
+            const chunkInfo = chunkMap.find((c) => c.chunkIndex === i);
             if (!chunkInfo) {
                 return res.status(500).json({ error: `Chunk ${i} mapping not found` });
             }
@@ -40,7 +55,6 @@ router.get('/:fileName', async (req, res) => {
                 });
             }
 
-            // Request the chunk from the device via WebSocket
             const chunkData = await new Promise((resolve, reject) => {
                 const timeout = setTimeout(() => reject(new Error(`Timeout getting chunk ${i}`)), 30000);
 
@@ -62,7 +76,7 @@ router.get('/:fileName', async (req, res) => {
 
         // Stream the reassembled file
         const fullFile = Buffer.concat(chunkBuffers);
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${fileEntry.name}"`);
         res.setHeader('Content-Length', fullFile.length);
         res.setHeader('Content-Type', 'application/octet-stream');
         res.send(fullFile);
