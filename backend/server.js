@@ -59,14 +59,14 @@ const generalLimiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 5,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 30,
     message: { error: 'Too many attempts. Try again later.' },
 });
 
 const signupLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 3,
+    windowMs: 15 * 60 * 1000,
+    max: 10,
     message: { error: 'Too many signup attempts. Try again later.' },
 });
 

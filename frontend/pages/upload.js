@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
 import AuthGuard from '../components/AuthGuard';
 import Navbar from '../components/Navbar';
 import ShareDialog from '../components/ShareDialog';
 import { uploadFile } from '../lib/upload';
-import { storeEncryptionKey, storeChunk, getChunk, getStoredChunkCount } from '../lib/chunkStore';
+import { storeEncryptionKey } from '../lib/chunkStore';
 import { wrapAESKey } from '../lib/keyManager';
-import { getAuthHeaders, getAccessToken, getUser } from '../lib/authStore';
-
-let socket = null;
+import { getAuthHeaders, getUser } from '../lib/authStore';
+import { useSocket } from '../lib/useSocket';
 
 export default function UploadPage() {
     return (
@@ -23,63 +21,10 @@ function UploadContent() {
     const [progress, setProgress] = useState(0);
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
-    const [deviceCount, setDeviceCount] = useState(0);
-    const [storedChunks, setStoredChunks] = useState(0);
     const [showShare, setShowShare] = useState(false);
     const [lastUpload, setLastUpload] = useState(null); // { fileId, key }
     const fileInputRef = useRef(null);
-
-    useEffect(() => {
-        let id = localStorage.getItem('deviceId');
-        if (!id) {
-            id = `device-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-            localStorage.setItem('deviceId', id);
-        }
-
-        const host = window.location.hostname;
-        socket = io(`http://${host}:4000`, { withCredentials: true });
-
-        socket.on('connect', () => {
-            const token = getAccessToken();
-            if (token) socket.emit('authenticate', token);
-        });
-
-        socket.on('authenticated', () => {
-            socket.emit('register', id);
-        });
-
-        socket.on('deviceStatus', ({ count }) => setDeviceCount(count));
-
-        socket.on('storeChunk', async (data, ack) => {
-            try {
-                await storeChunk(data.fileId, data.chunkIndex, data.data);
-                updateChunkCount();
-                ack({ success: true });
-            } catch (err) {
-                ack({ success: false, error: err.message });
-            }
-        });
-
-        socket.on('getChunk', async (request, ack) => {
-            try {
-                const chunk = await getChunk(request.fileId, request.chunkIndex);
-                ack(chunk ? { data: chunk.data } : { data: null, error: 'Chunk not found' });
-            } catch (err) {
-                ack({ data: null, error: err.message });
-            }
-        });
-
-        updateChunkCount();
-
-        return () => { if (socket) socket.disconnect(); };
-    }, []);
-
-    async function updateChunkCount() {
-        try {
-            const count = await getStoredChunkCount();
-            setStoredChunks(count);
-        } catch { }
-    }
+    const { socket, deviceCount, storedChunks } = useSocket();
 
     function handleFileChange(e) {
         const file = e.target.files[0];
@@ -131,11 +76,10 @@ function UploadContent() {
             }
 
             setLastUpload({ fileId, key });
-            showMsg(`"${selectedFile.name}" encrypted & distributed!`, 'success');
+            showMsg(`"${selectedFile.name}" encrypted & stored!`, 'success');
             setSelectedFile(null);
             setProgress(0);
             if (fileInputRef.current) fileInputRef.current.value = '';
-            updateChunkCount();
         } catch (err) {
             showMsg(err.message || 'Upload failed', 'error');
             setProgress(0);

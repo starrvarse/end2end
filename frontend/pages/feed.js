@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { io } from 'socket.io-client';
+import { useState, useEffect } from 'react';
 import AuthGuard from '../components/AuthGuard';
 import Navbar from '../components/Navbar';
 import PostCard from '../components/PostCard';
-import { getAuthHeaders, getAccessToken, getUser } from '../lib/authStore';
-import { storeChunk, getChunk, getStoredChunkCount } from '../lib/chunkStore';
-
-let socket = null;
+import { getAuthHeaders } from '../lib/authStore';
+import { useSocket } from '../lib/useSocket';
 
 export default function FeedPage() {
     return (
@@ -21,89 +18,32 @@ function FeedContent() {
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
-    const [deviceCount, setDeviceCount] = useState(0);
-    const [storedChunks, setStoredChunks] = useState(0);
     const [pendingCount, setPendingCount] = useState(0);
-    const [deviceId, setDeviceId] = useState('');
+    const { socket, deviceCount, storedChunks } = useSocket();
 
-    // Initialize socket connection
     useEffect(() => {
-        let id = localStorage.getItem('deviceId');
-        if (!id) {
-            id = `device-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-            localStorage.setItem('deviceId', id);
-        }
-        setDeviceId(id);
-
-        const host = window.location.hostname;
-        socket = io(`http://${host}:4000`, { withCredentials: true });
-
-        socket.on('connect', () => {
-            // Authenticate socket with JWT
-            const token = getAccessToken();
-            if (token) {
-                socket.emit('authenticate', token);
-            }
-        });
-
-        socket.on('authenticated', () => {
-            socket.emit('register', id);
-        });
-
-        socket.on('deviceStatus', ({ count }) => {
-            setDeviceCount(count);
-        });
-
-        socket.on('storeChunk', async (data, ack) => {
-            try {
-                await storeChunk(data.fileId, data.chunkIndex, data.data);
-                updateChunkCount();
-                ack({ success: true });
-            } catch (err) {
-                ack({ success: false, error: err.message });
-            }
-        });
-
-        socket.on('getChunk', async (request, ack) => {
-            try {
-                const chunk = await getChunk(request.fileId, request.chunkIndex);
-                if (chunk) {
-                    ack({ data: chunk.data });
-                } else {
-                    ack({ data: null, error: 'Chunk not found' });
-                }
-            } catch (err) {
-                ack({ data: null, error: err.message });
-            }
-        });
-
-        socket.on('filesUpdated', () => {
-            loadPosts(1, true);
-        });
-
-        socket.on('newPost', () => {
-            loadPosts(1, true);
-        });
-
-        socket.on('connectionRequest', () => {
-            loadPendingCount();
-        });
-
         loadPosts(1, true);
-        updateChunkCount();
         loadPendingCount();
-
-        return () => {
-            if (socket) socket.disconnect();
-        };
     }, []);
 
-    async function updateChunkCount() {
-        try {
-            const count = await getStoredChunkCount();
-            setStoredChunks(count);
-        } catch { }
-    }
+    // Listen for real-time events
+    useEffect(() => {
+        if (!socket) return;
+
+        const onFilesUpdated = () => loadPosts(1, true);
+        const onNewPost = () => loadPosts(1, true);
+        const onConnectionRequest = () => loadPendingCount();
+
+        socket.on('filesUpdated', onFilesUpdated);
+        socket.on('newPost', onNewPost);
+        socket.on('connectionRequest', onConnectionRequest);
+
+        return () => {
+            socket.off('filesUpdated', onFilesUpdated);
+            socket.off('newPost', onNewPost);
+            socket.off('connectionRequest', onConnectionRequest);
+        };
+    }, [socket]);
 
     async function loadPendingCount() {
         try {

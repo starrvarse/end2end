@@ -1,5 +1,6 @@
-import { generateKey, exportKey, encryptFile } from './crypto';
+import { generateKey, exportKey, encryptFile, bufferToBase64 } from './crypto';
 import { getAuthHeaders } from './authStore';
+import { storeChunk, storeEncryptionKey } from './chunkStore';
 
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
 const API_BASE = '/api';
@@ -8,9 +9,11 @@ const API_BASE = '/api';
  * Upload a file with end-to-end encryption (authenticated).
  * 1. Generate AES-256 key
  * 2. Encrypt the entire file client-side
- * 3. Split encrypted data into chunks
- * 4. Upload chunks to server
+ * 3. Split encrypted data into chunks, store in IndexedDB
+ * 4. Register file metadata with server (no chunk data sent to server!)
  * 5. Return key for wrapping/sharing
+ *
+ * Chunks live ONLY on devices (IndexedDB). Server only stores metadata.
  *
  * @param {File} file - The file to upload
  * @param {function} onProgress - Callback with progress percentage (0-100)
@@ -29,38 +32,24 @@ export async function uploadFile(file, onProgress) {
     const encryptedSize = encryptedBuffer.byteLength;
     const totalChunks = Math.ceil(encryptedSize / CHUNK_SIZE);
 
-    // Step 3: Upload encrypted chunks
+    // Step 3: Split into chunks and store ONLY in local IndexedDB
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
         const start = chunkIndex * CHUNK_SIZE;
         const end = Math.min(start + CHUNK_SIZE, encryptedSize);
         const chunkData = encryptedBuffer.slice(start, end);
-        const chunkBlob = new Blob([chunkData]);
 
-        const formData = new FormData();
-        formData.append('chunk', chunkBlob, `chunk-${chunkIndex}`);
-        formData.append('chunkIndex', chunkIndex.toString());
-        formData.append('totalChunks', totalChunks.toString());
-        formData.append('fileName', file.name);
-        formData.append('fileId', fileId);
-        formData.append('fileSize', encryptedSize.toString());
+        const base64Chunk = bufferToBase64(new Uint8Array(chunkData));
+        await storeChunk(fileId, chunkIndex, base64Chunk);
 
-        const res = await fetch(`${API_BASE}/upload`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            body: formData,
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Chunk upload failed');
-        }
-
-        const uploadProgress = 10 + Math.round(((chunkIndex + 1) / totalChunks) * 80);
+        const uploadProgress = 10 + Math.round(((chunkIndex + 1) / totalChunks) * 70);
         onProgress(uploadProgress);
     }
 
-    // Step 4: Tell server to distribute chunks to devices
-    const mergeRes = await fetch(`${API_BASE}/merge`, {
+    // Store encryption key locally for instant future downloads
+    await storeEncryptionKey(fileId, exportedKey);
+
+    // Step 4: Register file metadata with server (no chunk data sent!)
+    const registerRes = await fetch(`${API_BASE}/files/register`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -70,14 +59,15 @@ export async function uploadFile(file, onProgress) {
             fileId,
             fileName: file.name,
             totalChunks,
-            fileSize: file.size,
+            fileSize: encryptedSize,
+            originalSize: file.size,
             encrypted: true,
         }),
     });
 
-    if (!mergeRes.ok) {
-        const err = await mergeRes.json();
-        throw new Error(err.error || 'File distribution failed');
+    if (!registerRes.ok) {
+        const err = await registerRes.json();
+        throw new Error(err.error || 'File registration failed');
     }
 
     onProgress(100);

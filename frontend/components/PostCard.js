@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAuthHeaders, getUser } from '../lib/authStore';
 import { importKey, decryptData } from '../lib/crypto';
-import { getEncryptionKey, storeEncryptionKey } from '../lib/chunkStore';
+import { getEncryptionKey, storeEncryptionKey, assembleFileLocally } from '../lib/chunkStore';
 import { unwrapAESKey, hasPrivateKey } from '../lib/keyManager';
 
 const avatarEmojis = ['🦊', '🐺', '🦁', '🐯', '🦅', '🐉', '🦈', '🐙', '🦇', '🐸', '🦉', '🐲'];
@@ -98,18 +98,30 @@ export default function PostCard({ post, onLike, onComment }) {
             // Cache key locally
             await storeEncryptionKey(post.file.id, aesKeyBase64);
 
-            // Download encrypted file
-            const host = window.location.hostname;
-            const res = await fetch(`http://${host}:4000/download/${post.file.id}`, {
-                headers: getAuthHeaders(),
-            });
-
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Download failed');
+            // Try local assembly first (chunks in IndexedDB)
+            let encryptedBuffer = null;
+            if (post.file.totalChunks) {
+                encryptedBuffer = await assembleFileLocally(post.file.id, post.file.totalChunks);
+                if (encryptedBuffer) {
+                    console.log('File assembled from local IndexedDB chunks');
+                }
             }
 
-            const encryptedBuffer = await res.arrayBuffer();
+            // Fall back to server download if local assembly failed
+            if (!encryptedBuffer) {
+                console.log('Falling back to server download');
+                const res = await fetch(`/api/download/${post.file.id}`, {
+                    headers: getAuthHeaders(),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || 'Download failed');
+                }
+
+                encryptedBuffer = await res.arrayBuffer();
+            }
+
             const cryptoKey = await importKey(aesKeyBase64);
             const decryptedBuffer = await decryptData(encryptedBuffer, cryptoKey);
 
@@ -125,7 +137,12 @@ export default function PostCard({ post, onLike, onComment }) {
             URL.revokeObjectURL(url);
         } catch (e) {
             console.error('Download failed:', e);
-            alert(e.message || 'Download failed');
+            const msg = e.message || 'Download failed';
+            if (msg.includes('Chunk not found') || msg.includes('Timeout') || msg.includes('offline')) {
+                alert('File data unavailable. The file chunks are no longer accessible on any device. The owner may need to re-upload it.');
+            } else {
+                alert(msg);
+            }
         } finally {
             setDownloading(false);
         }

@@ -39,6 +39,20 @@ router.get('/:fileId', authenticate, async (req, res) => {
         const connectedDevices = req.app.get('connectedDevices');
         const chunkMap = JSON.parse(fileEntry.chunkMap);
 
+        // Build a list of all devices belonging to the file owner (fallback pool)
+        const ownerDevices = [];
+        for (const [devId, devInfo] of connectedDevices.entries()) {
+            if (devInfo.userId === fileEntry.ownerId) {
+                ownerDevices.push({ deviceId: devId, ...devInfo });
+            }
+        }
+
+        // Also collect all connected devices as a last resort
+        const allDevices = Array.from(connectedDevices.entries()).map(([devId, devInfo]) => ({
+            deviceId: devId,
+            ...devInfo,
+        }));
+
         // Collect all chunks from devices in order
         const chunkBuffers = [];
 
@@ -48,28 +62,60 @@ router.get('/:fileId', authenticate, async (req, res) => {
                 return res.status(500).json({ error: `Chunk ${i} mapping not found` });
             }
 
-            const device = connectedDevices.get(chunkInfo.deviceId);
-            if (!device) {
+            // Build a prioritized list of devices to try:
+            // 1. The specific device from chunkMap
+            // 2. Other owner devices
+            // 3. All other connected devices
+            const devicesToTry = [];
+            const mappedDevice = connectedDevices.get(chunkInfo.deviceId);
+            if (mappedDevice) {
+                devicesToTry.push({ deviceId: chunkInfo.deviceId, ...mappedDevice });
+            }
+            for (const dev of ownerDevices) {
+                if (dev.deviceId !== chunkInfo.deviceId) devicesToTry.push(dev);
+            }
+            for (const dev of allDevices) {
+                if (!devicesToTry.some((d) => d.deviceId === dev.deviceId)) devicesToTry.push(dev);
+            }
+
+            if (devicesToTry.length === 0) {
                 return res.status(503).json({
-                    error: `Device "${chunkInfo.deviceId}" is offline. Cannot retrieve chunk ${i}. File unavailable.`,
+                    error: `No devices online. Cannot retrieve chunk ${i}. File unavailable.`,
                 });
             }
 
-            const chunkData = await new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error(`Timeout getting chunk ${i}`)), 30000);
+            let chunkData = null;
+            let lastError = null;
 
-                device.socket.emit('getChunk', {
-                    fileId: fileEntry.id,
-                    chunkIndex: i,
-                }, (response) => {
-                    clearTimeout(timeout);
-                    if (response && response.data) {
-                        resolve(Buffer.from(response.data, 'base64'));
-                    } else {
-                        reject(new Error(`Device failed to return chunk ${i}`));
-                    }
+            for (const device of devicesToTry) {
+                try {
+                    chunkData = await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+
+                        device.socket.emit('getChunk', {
+                            fileId: fileEntry.id,
+                            chunkIndex: i,
+                        }, (response) => {
+                            clearTimeout(timeout);
+                            if (response && response.data) {
+                                resolve(Buffer.from(response.data, 'base64'));
+                            } else {
+                                reject(new Error(response?.error || 'No data'));
+                            }
+                        });
+                    });
+                    break; // Got the chunk successfully
+                } catch (err) {
+                    lastError = err;
+                    console.log(`Device ${device.deviceId} failed for chunk ${i}: ${err.message}, trying next...`);
+                }
+            }
+
+            if (!chunkData) {
+                return res.status(503).json({
+                    error: `Could not retrieve chunk ${i} from any device. Last error: ${lastError?.message}`,
                 });
-            });
+            }
 
             chunkBuffers.push(chunkData);
         }

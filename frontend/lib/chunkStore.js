@@ -128,3 +128,44 @@ export async function hasEncryptionKey(fileId) {
     const entry = await getEncryptionKey(fileId);
     return !!entry;
 }
+
+/**
+ * Try to assemble a complete file from locally stored chunks.
+ * Returns the concatenated ArrayBuffer if ALL chunks are available locally,
+ * or null if any chunk is missing (caller should fall back to server download).
+ *
+ * @param {string} fileId
+ * @param {number} totalChunks
+ * @returns {Promise<ArrayBuffer|null>}
+ */
+export async function assembleFileLocally(fileId, totalChunks) {
+    try {
+        const chunks = [];
+        for (let i = 0; i < totalChunks; i++) {
+            const chunk = await getChunk(fileId, i);
+            if (!chunk || !chunk.data) {
+                return null; // Missing chunk — can't assemble locally
+            }
+            // Convert base64 to binary
+            const binary = atob(chunk.data);
+            const bytes = new Uint8Array(binary.length);
+            for (let j = 0; j < binary.length; j++) {
+                bytes[j] = binary.charCodeAt(j);
+            }
+            chunks.push(bytes);
+        }
+
+        // Concatenate all chunks
+        const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+        }
+        return result.buffer;
+    } catch (e) {
+        console.error('Local assembly failed:', e);
+        return null;
+    }
+}

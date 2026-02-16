@@ -140,7 +140,10 @@ router.get('/search', authenticate, async (req, res) => {
             take: 20,
         });
 
-        res.json({ users });
+        // Add connectionStatus for frontend rendering
+        const usersWithStatus = users.map(u => ({ ...u, connectionStatus: 'none' }));
+
+        res.json({ users: usersWithStatus });
     } catch (error) {
         console.error('Search users error:', error);
         res.status(500).json({ error: 'Search failed' });
