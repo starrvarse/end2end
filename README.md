@@ -10,6 +10,17 @@
 
 ---
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Sign In](frontend/public/screenshots/signin.png) **Sign In** | ![Sign Up](frontend/public/screenshots/sigbup.png) **Sign Up** |
+| ![Feed](frontend/public/screenshots/feeds.png) **Feed** | ![Upload](frontend/public/screenshots/uploadspage.png) **Upload** |
+| ![My Files](frontend/public/screenshots/myfiles.png) **My Files** | ![Connections](frontend/public/screenshots/connectionspage.png) **Connections** |
+| ![Groups](frontend/public/screenshots/groupslists.png) **Groups** | ![Group Feed](frontend/public/screenshots/groupfeed.png) **Group Feed** |
+
+---
+
 ## Purpose
 
 Most file-sharing platforms store your data on centralized servers where the provider can read, scan, or hand over your files to third parties. **E2E** takes a fundamentally different approach.
