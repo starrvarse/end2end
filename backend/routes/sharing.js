@@ -150,34 +150,73 @@ router.post(
  */
 router.get('/key/:fileId', authenticate, async (req, res) => {
     try {
+        const fileId = req.params.fileId;
+        const userId = req.user.id;
+
         const keyShare = await prisma.fileKeyShare.findUnique({
             where: {
-                fileId_userId: { fileId: req.params.fileId, userId: req.user.id },
+                fileId_userId: { fileId, userId },
             },
         });
 
-        if (!keyShare) {
-            // Check if there's a public post with this file
-            const publicPost = await prisma.post.findFirst({
-                where: {
-                    fileId: req.params.fileId,
-                    visibility: 'public',
-                    publicFileKey: { not: null },
-                },
-            });
-
-            if (publicPost) {
-                return res.json({
-                    encryptedAESKey: null,
-                    publicFileKey: publicPost.publicFileKey,
-                    isPublic: true,
-                });
-            }
-
-            return res.status(404).json({ error: 'No key found for this file' });
+        if (keyShare) {
+            return res.json({ encryptedAESKey: keyShare.encryptedAESKey, isPublic: false });
         }
 
-        res.json({ encryptedAESKey: keyShare.encryptedAESKey, isPublic: false });
+        // Check if there's a public post with this file
+        const publicPost = await prisma.post.findFirst({
+            where: {
+                fileId,
+                visibility: 'public',
+                publicFileKey: { not: null },
+            },
+        });
+
+        if (publicPost) {
+            return res.json({
+                encryptedAESKey: null,
+                publicFileKey: publicPost.publicFileKey,
+                isPublic: true,
+            });
+        }
+
+        // Check if user is a member of a group where this file was posted
+        // If so, the key should have been shared but wasn't (e.g., member added after post)
+        const groupPost = await prisma.post.findFirst({
+            where: {
+                fileId,
+                visibility: 'group',
+                groupId: { not: null },
+            },
+            include: {
+                group: {
+                    include: {
+                        members: { where: { userId } },
+                    },
+                },
+            },
+        });
+
+        if (groupPost && groupPost.group?.members?.length > 0) {
+            // User IS a group member but has no key — the file owner needs to re-share
+            // Check if the file owner has a self key share we can use to re-wrap
+            const file = await prisma.file.findUnique({ where: { id: fileId } });
+            if (file) {
+                const ownerKeyShare = await prisma.fileKeyShare.findUnique({
+                    where: { fileId_userId: { fileId, userId: file.ownerId } },
+                });
+                // We can't re-wrap server-side (we'd need the owner's private key).
+                // But we can inform the client that the key exists and needs re-sharing.
+                return res.status(403).json({
+                    error: 'Key not shared with you yet',
+                    needsReShare: true,
+                    ownerId: file.ownerId,
+                    groupId: groupPost.groupId,
+                });
+            }
+        }
+
+        return res.status(404).json({ error: 'No key found for this file' });
     } catch (error) {
         console.error('Get share key error:', error);
         res.status(500).json({ error: 'Failed to get file key' });

@@ -19,7 +19,7 @@ function FeedContent() {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [pendingCount, setPendingCount] = useState(0);
-    const { socket, deviceCount, storedChunks } = useSocket();
+    const { socket } = useSocket();
 
     useEffect(() => {
         loadPosts(1, true);
@@ -112,24 +112,16 @@ function FeedContent() {
             <div className="container">
                 <div className="feed-header">
                     <h2>Feed</h2>
-                    <div className="stats-bar">
-                        <div className="stat-item">
-                            <span className="stat-dot active"></span>
-                            <span>{deviceCount} Device{deviceCount !== 1 ? 's' : ''}</span>
-                        </div>
-                        <div className="stat-item">
-                            <span>💾 {storedChunks} chunks</span>
-                        </div>
-                    </div>
                 </div>
 
                 {posts.length === 0 && !loading ? (
                     <div className="empty-feed">
-                        <h3>Your feed is empty</h3>
-                        <p>Upload files, connect with others, and share to see posts here.</p>
+                        <div className="empty-icon">📡</div>
+                        <h3>No posts yet</h3>
+                        <p>Upload a file and share it, or connect with others to see their posts.</p>
                     </div>
                 ) : (
-                    <div className="posts-list">
+                    <div className="posts-grid">
                         {posts.map((post) => (
                             <PostCard
                                 key={post.id}
@@ -141,11 +133,11 @@ function FeedContent() {
                     </div>
                 )}
 
-                {loading && <div className="loading-spinner"><div className="spinner"></div></div>}
+                {loading && <div className="feed-loading"><div className="spinner"></div></div>}
 
                 {hasMore && !loading && posts.length > 0 && (
                     <button className="load-more" onClick={() => loadPosts(page + 1)}>
-                        Load More
+                        Load more
                     </button>
                 )}
             </div>
