@@ -1,101 +1,165 @@
 <p align="center">
-  <img src="frontend/public/logo.png" alt="E2E Logo" width="120" />
+  <img src="frontend/public/logo.png" alt="E2E Logo" width="140" />
 </p>
 
-<h1 align="center">E2E — End-to-End Encrypted File Sharing</h1>
+<h1 align="center">E2E</h1>
 
 <p align="center">
-  A zero-knowledge, encrypted file sharing social platform designed for private communities on local networks.
+  <strong>Zero-knowledge encrypted file sharing for private communities.</strong>
+</p>
+
+<p align="center">
+  <a href="#-quick-start"><img src="https://img.shields.io/badge/Get_Started-4f46e5?style=for-the-badge&logo=rocket&logoColor=white" alt="Get Started" /></a>
+  <a href="#-self-hosting-guide"><img src="https://img.shields.io/badge/Self_Host-0f172a?style=for-the-badge&logo=server&logoColor=white" alt="Self Host" /></a>
+  <a href="https://github.com/starrvarse/end2end"><img src="https://img.shields.io/badge/GitHub-171515?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" /></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/AES--256--GCM-Encrypted-22c55e?style=flat-square" alt="AES-256" />
+  <img src="https://img.shields.io/badge/RSA--4096-Key_Exchange-3b82f6?style=flat-square" alt="RSA-4096" />
+  <img src="https://img.shields.io/badge/Zero_Knowledge-Server-a855f7?style=flat-square" alt="Zero Knowledge" />
+  <img src="https://img.shields.io/badge/LAN_First-Self_Hosted-f59e0b?style=flat-square" alt="LAN First" />
+  <img src="https://img.shields.io/badge/Open_Source-MIT-ef4444?style=flat-square" alt="Open Source" />
+</p>
+
+<br />
+
+<p align="center">
+  <em>Your files. Your keys. Your network. No cloud. No compromise.</em>
 </p>
 
 ---
 
-## Screenshots
+## 📸 Screenshots
 
-| | |
-|---|---|
-| ![Sign In](frontend/public/screenshots/signin.png) **Sign In** | ![Sign Up](frontend/public/screenshots/sigbup.png) **Sign Up** |
-| ![Feed](frontend/public/screenshots/feeds.png) **Feed** | ![Upload](frontend/public/screenshots/uploadspage.png) **Upload** |
-| ![My Files](frontend/public/screenshots/myfiles.png) **My Files** | ![Connections](frontend/public/screenshots/connectionspage.png) **Connections** |
-| ![Groups](frontend/public/screenshots/groupslists.png) **Groups** | ![Group Feed](frontend/public/screenshots/groupfeed.png) **Group Feed** |
-
----
-
-## Purpose
-
-Most file-sharing platforms store your data on centralized servers where the provider can read, scan, or hand over your files to third parties. **E2E** takes a fundamentally different approach.
-
-E2E is built for **small communities, teams, families, or organizations** who want to share files with absolute certainty that:
-
-- **No server administrator** can read their files
-- **No third party** can intercept or decrypt their data
-- **Files live on user devices**, not on a central server
-- **Encryption happens in the browser** before data ever leaves the device
-
-This is not a cloud service. It's a **self-hosted, LAN-first platform** where a group of people can share encrypted files, form connections, create groups, and interact through a social feed — all while maintaining true end-to-end encryption.
-
-**Use cases:**
-- A family sharing private photos and documents at home
-- A small team collaborating with sensitive files on an office network
-- A group of friends sharing media on a local network without trusting any cloud provider
-- An organization that needs an air-gapped file sharing solution
+<table>
+  <tr>
+    <td align="center"><strong>Sign In</strong><br /><img src="frontend/public/screenshots/signin.png" width="400" /></td>
+    <td align="center"><strong>Sign Up</strong><br /><img src="frontend/public/screenshots/sigbup.png" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Feed</strong><br /><img src="frontend/public/screenshots/feeds.png" width="400" /></td>
+    <td align="center"><strong>Upload</strong><br /><img src="frontend/public/screenshots/uploadspage.png" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>My Files</strong><br /><img src="frontend/public/screenshots/myfiles.png" width="400" /></td>
+    <td align="center"><strong>Connections</strong><br /><img src="frontend/public/screenshots/connectionspage.png" width="400" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Groups</strong><br /><img src="frontend/public/screenshots/groupslists.png" width="400" /></td>
+    <td align="center"><strong>Group Feed</strong><br /><img src="frontend/public/screenshots/groupfeed.png" width="400" /></td>
+  </tr>
+</table>
 
 ---
 
-## Technology Stack
+## 🎯 What is E2E?
 
-### Backend
-| Technology | Version | Purpose |
+Most file-sharing platforms store your data on centralized servers where the provider can read, scan, or hand over your files to third parties. **E2E takes a fundamentally different approach.**
+
+> **E2E is a self-hosted, LAN-first platform** where a group of people can share encrypted files, form connections, create groups, and interact through a social feed — all while maintaining **true end-to-end encryption.**
+
+### Who is this for?
+
+| 👨‍👩‍👧‍👦 Families | 👥 Teams | 🏢 Organizations |
 |---|---|---|
-| **Node.js** | 18+ | Runtime environment |
-| **Express** | 4.x | HTTP server & REST API |
-| **Socket.IO** | 4.x | Real-time WebSocket communication for chunk routing |
-| **Prisma** | 5.x | ORM for database operations |
-| **SQLite** | — | Lightweight file-based database (zero setup) |
-| **JSON Web Tokens** | — | Authentication (15-min access + 7-day refresh tokens) |
-| **bcrypt** | — | Password hashing |
-| **Helmet** | — | HTTP security headers |
-| **express-rate-limit** | — | API rate limiting |
-
-### Frontend
-| Technology | Version | Purpose |
-|---|---|---|
-| **Next.js** | 16.x | React framework (Pages Router) |
-| **React** | 19.x | UI library |
-| **node-forge** | 1.x | RSA-OAEP 4096 & AES-256-GCM encryption (works over HTTP) |
-| **Socket.IO Client** | 4.x | Real-time connection to backend |
-| **IndexedDB** | Browser API | Local storage for encryption keys and file chunks |
-
-### Why node-forge instead of Web Crypto API?
-The browser's native `crypto.subtle` API is only available in **Secure Contexts** (HTTPS or localhost). Since E2E is designed to run on a **local network over HTTP** (e.g., `http://192.168.x.x:3000`), we use `node-forge` as a pure-JavaScript cryptography library that works in any context.
+| Share private photos and documents at home | Collaborate with sensitive files on an office network | Air-gapped file sharing with zero cloud dependency |
 
 ---
 
-## Features
+## 💡 Why Open Source?
 
-### File Management
-- **Encrypted upload** — Files are encrypted client-side with AES-256-GCM before upload
-- **Chunk-based storage** — Files are split into chunks and distributed to connected devices
-- **Encrypted download** — Chunks are reassembled and decrypted in the browser
-- **My Files** — View, download, share, and delete your uploaded files
+We believe that **privacy tools have no business being closed-source.**
 
-### Social Platform
-- **Feed** — A social feed showing shared files with previews (images, video, audio)
-- **Connections** — Send and accept connection requests (like friends)
-- **Groups** — Create groups, add members, share files within groups
-- **Posts** — Share files with captions, set visibility (public, connections only, or group)
+When an app claims to encrypt your data, you shouldn't have to take their word for it. You should be able to **read every line of code**, verify the encryption is real, and confirm that no backdoors exist. That's why E2E is fully open source.
+
+### Our reasoning:
+
+- **🔍 Trust through transparency** — Anyone can audit the code and verify that encryption actually works as described. No hidden telemetry, no secret key escrow, no silent logging.
+
+- **🛡️ Security by scrutiny** — Closed-source security is just security by obscurity. Real security survives public inspection. We *want* researchers and developers to examine our crypto implementation.
+
+- **🌍 Privacy is a public good** — Encryption tools should be accessible to everyone — not locked behind subscriptions, enterprise tiers, or walled gardens. If privacy is a right, the tools to exercise it should be free.
+
+- **🤝 Community-driven improvement** — One team can miss vulnerabilities. A community of contributors, testers, and security researchers makes the platform stronger than we ever could alone.
+
+- **🚫 No vendor lock-in** — Your data, your server, your rules. If we disappear tomorrow, the code is still yours. Fork it, modify it, run it forever.
+
+> *"If you can't see how your encryption works, you can't know if it actually does."*
+
+---
+
+## ✨ Features
+
+<table>
+  <tr>
+    <td>
+
+### 🔒 File Management
+- **Encrypted upload** — AES-256-GCM encryption in-browser before upload
+- **Chunk-based storage** — Files split and distributed to connected devices
+- **Encrypted download** — Chunks reassembled and decrypted locally
+- **My Files** — View, download, share, and delete your files
+
+</td>
+    <td>
+
+### 🌐 Social Platform
+- **Feed** — Social feed with file previews (images, video, audio)
+- **Connections** — Send and accept friend requests
+- **Groups** — Create groups, add members, share within groups
+- **Posts** — Share with captions, control visibility
 - **Comments & Likes** — Interact with shared posts
 
-### Security
-- **RSA-4096 key pairs** — Generated in-browser during signup
-- **AES-256-GCM file encryption** — Each file gets a unique encryption key
-- **Per-recipient key wrapping** — File keys are wrapped with each recipient's RSA public key
-- **Zero-knowledge server** — Server never sees plaintext files, keys, or passwords
-- **HTTP-only refresh tokens** — Secure session management with auto-refresh
+</td>
+  </tr>
+</table>
+
+### 🛡️ Security at Every Layer
+| Feature | Implementation |
+|---|---|
+| Key Pairs | **RSA-4096** generated in-browser during signup |
+| File Encryption | **AES-256-GCM** — unique key per file |
+| Key Sharing | File keys **wrapped with recipient's RSA public key** |
+| Server Knowledge | **Zero** — server mathematically cannot decrypt anything |
+| Sessions | **HTTP-only cookies** with 15-min access + 7-day refresh tokens |
 
 ---
 
-## How Data Is Stored — In Depth
+## 🏗️ Technology Stack
+
+<table>
+  <tr>
+    <th align="center">⚙️ Backend</th>
+    <th align="center">🎨 Frontend</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/Express-4.x-000000?style=flat-square&logo=express&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/Socket.IO-4.x-010101?style=flat-square&logo=socket.io&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/Prisma-5.x-2D3748?style=flat-square&logo=prisma&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/SQLite-Database-003B57?style=flat-square&logo=sqlite&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/JWT-Auth-000000?style=flat-square&logo=jsonwebtokens&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/bcrypt-Hashing-1C1C1C?style=flat-square" /><br />
+      <img src="https://img.shields.io/badge/Helmet-Security-1C1C1C?style=flat-square" />
+    </td>
+    <td>
+      <img src="https://img.shields.io/badge/Next.js-16.x-000000?style=flat-square&logo=next.js&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/React-19.x-61DAFB?style=flat-square&logo=react&logoColor=black" /><br />
+      <img src="https://img.shields.io/badge/node--forge-1.x-1C1C1C?style=flat-square" /><br />
+      <img src="https://img.shields.io/badge/Socket.IO_Client-4.x-010101?style=flat-square&logo=socket.io&logoColor=white" /><br />
+      <img src="https://img.shields.io/badge/IndexedDB-Browser_API-4285F4?style=flat-square&logo=googlechrome&logoColor=white" />
+    </td>
+  </tr>
+</table>
+
+> **Why node-forge instead of Web Crypto API?**
+> The browser's native `crypto.subtle` is only available in **Secure Contexts** (HTTPS). Since E2E runs on a **local network over HTTP**, we use `node-forge` — a pure-JavaScript crypto library that works everywhere.
+
+---
+
+## 🔐 How Data Is Stored — In Depth
 
 ### The Encryption Flow
 
@@ -134,330 +198,306 @@ The browser's native `crypto.subtle` API is only available in **Secure Contexts*
                      └────────┘  └────────┘  └────────┘
 ```
 
-### What the Server Stores (SQLite Database)
+### What the Server Stores vs. Doesn't
 
-The server's SQLite database contains **only metadata and encrypted key material**:
+<table>
+  <tr>
+    <th>Data</th>
+    <th>What's Stored</th>
+    <th>Readable by Server?</th>
+  </tr>
+  <tr><td>👤 User account</td><td>Username, bcrypt hash, avatar ID</td><td>❌ Password is hashed</td></tr>
+  <tr><td>🔑 RSA Public Key</td><td>User's public key</td><td>✅ Public by design</td></tr>
+  <tr><td>🔐 RSA Private Key</td><td>Encrypted via PBKDF2</td><td>❌ Useless without password</td></tr>
+  <tr><td>📄 File metadata</td><td>ID, name, size, chunk map</td><td>✅ Metadata only</td></tr>
+  <tr><td>🗝️ File key shares</td><td>AES key wrapped with RSA</td><td>❌ Only recipient can unwrap</td></tr>
+  <tr><td>💬 Social data</td><td>Posts, comments, likes</td><td>✅ Social metadata</td></tr>
+</table>
 
-| Data | What's Stored | Can Server Read It? |
-|---|---|---|
-| **User account** | Username, bcrypt password hash, avatar ID | ❌ Password is hashed |
-| **RSA Public Key** | User's public key (used by others to encrypt for you) | ✅ Public by design |
-| **RSA Private Key** | Encrypted with your password via PBKDF2 | ❌ Useless without password |
-| **File metadata** | File ID, name, size, chunk count, chunk map | ✅ Metadata only, no content |
-| **File key shares** | AES key wrapped with recipient's RSA public key | ❌ Can only be unwrapped by recipient's private key |
-| **Posts/comments/likes** | Social interactions | ✅ Social metadata |
-| **Connections/groups** | Who's connected to whom | ✅ Social metadata |
+> **The server stores ZERO bytes of file content.** No raw data, no plaintext keys, no decrypted content, no previews.
 
-### What the Server Does NOT Store
+### Where File Chunks Live
 
-- ❌ Raw file data (not a single byte)
-- ❌ Plaintext encryption keys
-- ❌ Your password in plaintext
-- ❌ Your private key in usable form
-- ❌ Any decrypted file content
-- ❌ File previews or thumbnails
-
-### Where File Chunks Actually Live
-
-File chunks are stored in **IndexedDB** inside the browsers of connected devices. The server acts only as a WebSocket relay — when a device needs a chunk, the server asks other connected devices for it.
+Chunks are stored in **IndexedDB** inside connected browsers. The server is just a **message broker**:
 
 ```
 Server (coordinator only)
   │
   ├── "Device A, do you have chunk 3 of file X?"
-  │     └── Device A: "Yes, here it is" → encrypted chunk sent via WebSocket
+  │     └── Device A: "Yes, here it is" → encrypted chunk via WebSocket
   │
-  └── Chunk is delivered to the requesting device
-        └── Device decrypts locally with AES key from its own IndexedDB
+  └── Chunk delivered to requesting device
+        └── Decrypted locally with AES key from IndexedDB
 ```
-
-**No file data touches the server's disk.** The server is a message broker, not a storage provider.
 
 ### Key Wrapping for Sharing
 
-When you share a file with someone:
-
 ```
-Your AES key for the file
-        │
-        ▼
-Wrapped with recipient's RSA-4096 Public Key
-        │
-        ▼
-Stored on server as FileKeyShare record
-        │
-        ▼
-Recipient downloads the wrapped key
-        │
-        ▼
-Unwraps with their RSA Private Key (in their browser)
-        │
-        ▼
-Uses AES key to decrypt file chunks
+Your AES key  →  Wrapped with recipient's RSA-4096 Public Key
+                        │
+                  Stored on server as FileKeyShare
+                        │
+                  Recipient unwraps with their Private Key
+                        │
+                  Uses AES key to decrypt chunks
 ```
 
-Even if someone compromises the server database, they get RSA-encrypted blobs that are computationally infeasible to decrypt without the recipient's private key.
+> Even with **full database access**, an attacker gets RSA-encrypted blobs — computationally infeasible to crack without the private key.
 
 ---
 
-## Self-Hosting Guide
+## 🚀 Quick Start
+
+```bash
+# Clone
+git clone https://github.com/starrvarse/end2end.git
+cd end2end
+
+# Backend
+cd backend
+npm install
+npx prisma generate
+npx prisma db push
+node server.js          # → http://localhost:4000
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run build
+npm start               # → http://localhost:3000
+```
+
+Open `http://localhost:3000` → create an account → start sharing encrypted files.
+
+---
+
+## 🏠 Self-Hosting Guide
 
 ### Prerequisites
-- **Node.js 18+** installed
-- **npm** (comes with Node.js)
-- A machine on your local network (a PC, Raspberry Pi, old laptop, etc.)
 
-### Step 1: Clone the Repository
+| Requirement | Details |
+|---|---|
+| **Node.js** | Version 18 or higher |
+| **npm** | Comes with Node.js |
+| **Hardware** | Any machine — PC, Raspberry Pi, old laptop |
+| **Network** | All devices on the same LAN |
+
+### Step 1 → Clone
 
 ```bash
 git clone https://github.com/starrvarse/end2end.git
 cd end2end
 ```
 
-### Step 2: Set Up the Backend
+### Step 2 → Backend Setup
 
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Generate Prisma client
 npx prisma generate
-
-# Create/push database schema (creates SQLite file)
 npx prisma db push
-
-# Start the server
-node server.js
 ```
 
-The backend starts on **port 4000**.
-
-### Step 3: Configure Environment
-
-Create a `.env` file in the `backend/` directory:
-
+Create `backend/.env`:
 ```env
 DATABASE_URL="file:./dev.db"
 JWT_SECRET="your-random-secret-here-make-it-long"
 FRONTEND_ORIGIN="http://localhost:3000,http://YOUR_LOCAL_IP:3000"
 ```
 
-Replace `YOUR_LOCAL_IP` with your machine's local IP (e.g., `192.168.1.100`).
+```bash
+node server.js    # Starts on port 4000
+```
 
-**Finding your local IP:**
-- **Windows:** `ipconfig` → Look for IPv4 Address
-- **macOS/Linux:** `ifconfig` or `ip addr`
+> 💡 **Find your local IP:** Windows → `ipconfig` | macOS/Linux → `ifconfig` or `ip addr`
 
-### Step 4: Set Up the Frontend
+### Step 3 → Frontend Setup
 
 ```bash
 cd ../frontend
-
-# Install dependencies
 npm install
-
-# Build for production
-npm run build
-
-# Start the production server
-npm start
 ```
 
-The frontend starts on **port 3000**.
-
-### Step 5: Configure Frontend API URL
-
-Create or edit `frontend/.env.local`:
-
+Create `frontend/.env.local`:
 ```env
 NEXT_PUBLIC_API_URL=http://YOUR_LOCAL_IP:4000
 ```
 
-### Step 6: Access from Devices
+```bash
+npm run build
+npm start         # Starts on port 3000
+```
 
-Open a browser on any device connected to the same network:
+### Step 4 → Connect
 
+Open on any device on the same network:
 ```
 http://YOUR_LOCAL_IP:3000
 ```
 
-Each person creates their own account, and RSA keys are generated in their browser automatically.
+Each person creates their own account — RSA keys are generated automatically in their browser.
 
-### Using PM2 (Recommended for Production)
-
-For keeping the servers running permanently:
+### 🔄 PM2 (Keep It Running Forever)
 
 ```bash
-# Install PM2 globally
 npm install -g pm2
 
-# Start backend
-cd backend
-pm2 start server.js --name "e2e-backend"
+# Start both servers
+cd backend  && pm2 start server.js --name "e2e-backend"
+cd ../frontend && pm2 start npm --name "e2e-frontend" -- start
 
-# Start frontend
-cd ../frontend
-pm2 start npm --name "e2e-frontend" -- start
-
-# Save process list (auto-restart on reboot)
-pm2 save
-pm2 startup
+# Auto-restart on reboot
+pm2 save && pm2 startup
 ```
 
-**PM2 commands:**
+<details>
+<summary><strong>PM2 Commands Cheatsheet</strong></summary>
+
 ```bash
 pm2 list              # View running processes
 pm2 logs              # View logs
-pm2 restart all       # Restart all
-pm2 stop all          # Stop all
+pm2 restart all       # Restart everything
+pm2 stop all          # Stop everything
 ```
+</details>
 
 ---
 
-## Security Analysis
+## 🛡️ Security Analysis
 
-### What Makes E2E Secure
+### Protection Layers
 
-| Layer | Protection |
+| Layer | Implementation |
 |---|---|
-| **Encryption Algorithm** | AES-256-GCM — military-grade symmetric encryption with authentication |
-| **Key Exchange** | RSA-OAEP with 4096-bit keys — quantum-resistant key length |
-| **Password Storage** | bcrypt with salt rounds — industry standard |
-| **Key Derivation** | PBKDF2 — protects private key at rest |
-| **Transport** | WebSocket on LAN — data never leaves your network |
-| **Architecture** | Zero-knowledge — server mathematically cannot decrypt files |
-| **Token Security** | HTTP-only cookies for refresh tokens, short-lived access tokens |
-| **Rate Limiting** | express-rate-limit prevents brute force attacks |
-| **Headers** | Helmet.js sets security headers |
+| 🔐 **Encryption** | AES-256-GCM — authenticated symmetric encryption |
+| 🔑 **Key Exchange** | RSA-OAEP 4096-bit keys |
+| 🔒 **Passwords** | bcrypt with salt rounds |
+| 🗝️ **Key Storage** | PBKDF2-encrypted private keys |
+| 🌐 **Transport** | WebSocket on LAN — data stays local |
+| 🏗️ **Architecture** | Zero-knowledge — server can't decrypt |
+| 🎫 **Sessions** | HTTP-only cookies + short-lived access tokens |
+| 🚦 **Rate Limiting** | express-rate-limit on all endpoints |
+| 🪖 **Headers** | Helmet.js security headers |
 
-### Attack Scenarios & Mitigations
+### Attack Scenarios
 
-| Attack | Result |
+| 🎯 Attack Vector | 🛡️ Outcome |
 |---|---|
-| **Server database stolen** | Attacker gets bcrypt hashes, encrypted private keys, and RSA-wrapped AES keys. Without user passwords, nothing is decryptable. |
-| **Network traffic intercepted** | Attacker sees encrypted chunks. Without AES keys (stored in browser IndexedDB), chunks are random noise. |
-| **Server admin goes rogue** | Admin can see metadata (file names, usernames) but cannot decrypt any file content. |
-| **Physical access to a device** | If the browser is open and logged in, the attacker could access that session. Always log out on shared devices. |
-| **Brute force password** | Rate limiting on the API. bcrypt is slow by design (~10 hashes/second). |
+| **Database stolen** | Attacker gets bcrypt hashes + RSA-wrapped keys. Without passwords → nothing is decryptable. |
+| **Network sniffed** | Only encrypted chunks visible. Without AES keys → random noise. |
+| **Rogue admin** | Can see metadata (file names, usernames). Cannot decrypt any file. |
+| **Device accessed** | Active sessions are vulnerable. Always log out on shared devices. |
+| **Brute force** | Rate limited. bcrypt is intentionally slow (~10 hashes/sec). |
 
-### Honest Limitations
+### ⚡ Honest Limitations
 
-- **Metadata is visible** — The server knows file names, sizes, who shared with whom, and social activity. Only file *contents* are encrypted.
-- **No forward secrecy** — If a private key is compromised, all past files shared with that key can be decrypted.
-- **HTTP on LAN** — Traffic on the local network is not encrypted in transit (use a reverse proxy with TLS for added security).
+> We believe in transparency, not marketing.
+
+- **Metadata is visible** — Server knows file names, sizes, who shared with whom. Only *contents* are encrypted.
+- **No forward secrecy** — Compromised private key exposes all past files shared with it.
+- **HTTP on LAN** — Network traffic is unencrypted in transit. Use a reverse proxy with TLS for extra security.
 - **Browser storage is fragile** — Clearing browser data destroys keys and chunks permanently.
 
 ---
 
 ## ⚠️ Responsible Use
 
-### How This Can Be Misused
+> Any encryption tool can be used for wrong purposes. The zero-knowledge design means the server **cannot monitor, audit, intercept, or recover** file contents.
 
-Any encryption tool can be used for wrong purposes. The zero-knowledge design means:
+<table>
+  <tr>
+    <td>
 
-- **Server operators cannot monitor** what files are being shared
-- **File contents cannot be audited** or scanned
-- **Shared material cannot be intercepted** even with full server access
-- **Deleted evidence cannot be recovered** from encrypted chunks
+**❌ Do NOT use this for:**
+- Sharing illegal content of any kind
+- Distributing copyrighted material
+- Evading lawful investigations
+- Harassment or exploitation
 
-### Our Request
+</td>
+    <td>
 
-This platform was built to **protect privacy**, not to enable harm. We strongly urge:
+**✅ DO use this for:**
+- Private family photos & documents
+- Sensitive business communications
+- Personal media sharing
+- Exercising your right to privacy
 
-- ❌ **Do NOT** use this for sharing illegal content of any kind
-- ❌ **Do NOT** use this for distributing copyrighted material without authorization
-- ❌ **Do NOT** use this to evade lawful investigations
-- ❌ **Do NOT** use this for harassment, exploitation, or any harmful purpose
-- ✅ **DO** use this for sharing private family photos, work documents, personal media
-- ✅ **DO** use this to protect sensitive business communications
-- ✅ **DO** use this because you believe in your right to privacy
+</td>
+  </tr>
+</table>
 
-**Privacy is a right. Abuse is a choice. Choose wisely.**
+<p align="center">
+  <strong>Privacy is a right. Abuse is a choice. Choose wisely.</strong>
+</p>
 
-If you're hosting this for a community, you are responsible for establishing acceptable use policies and ensuring your members use the platform ethically.
+If you're hosting this for a community, you are responsible for establishing acceptable use policies.
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 end2end/
 ├── backend/
-│   ├── server.js              # Express + Socket.IO entry point
+│   ├── server.js                # Express + Socket.IO entry point
 │   ├── package.json
 │   ├── prisma/
-│   │   └── schema.prisma      # Database schema
+│   │   └── schema.prisma        # Database schema (SQLite)
 │   ├── routes/
-│   │   ├── auth.js            # Login, signup, token refresh
-│   │   ├── keys.js            # RSA key storage & retrieval
-│   │   ├── upload.js          # Chunk upload endpoint
-│   │   ├── merge.js           # Chunk merge coordination
-│   │   ├── download.js        # Chunk download routing
-│   │   ├── files.js           # File metadata & listing
-│   │   ├── sharing.js         # File key sharing (AES key wrapping)
-│   │   ├── connections.js     # Friend/connection management
-│   │   ├── groups.js          # Group CRUD & membership
-│   │   └── posts.js           # Social feed, comments, likes
+│   │   ├── auth.js              # Login, signup, token refresh
+│   │   ├── keys.js              # RSA key storage & retrieval
+│   │   ├── upload.js            # Chunk upload endpoint
+│   │   ├── merge.js             # Chunk merge coordination
+│   │   ├── download.js          # Chunk download routing
+│   │   ├── files.js             # File metadata & listing
+│   │   ├── sharing.js           # AES key wrapping & sharing
+│   │   ├── connections.js       # Friend / connection management
+│   │   ├── groups.js            # Group CRUD & membership
+│   │   └── posts.js             # Feed, comments, likes
 │   └── utils/
-│       └── fileHelpers.js     # Directory & file utilities
+│       └── fileHelpers.js       # Directory & file utilities
+│
 ├── frontend/
 │   ├── package.json
 │   ├── next.config.mjs
 │   ├── pages/
-│   │   ├── login.js           # Sign in page
-│   │   ├── signup.js          # Account creation + T&C
-│   │   ├── feed.js            # Social feed
-│   │   ├── upload.js          # File upload
-│   │   ├── myfiles.js         # User's file management
-│   │   ├── connections.js     # People & connection requests
-│   │   ├── groups/
-│   │   │   └── [id].js        # Group detail page
-│   │   └── groups.js          # Groups listing
+│   │   ├── login.js             # Sign in
+│   │   ├── signup.js            # Account creation + T&C
+│   │   ├── feed.js              # Social feed
+│   │   ├── upload.js            # File upload
+│   │   ├── myfiles.js           # File management
+│   │   ├── connections.js       # People & requests
+│   │   ├── groups.js            # Groups listing
+│   │   └── groups/[id].js       # Group detail
 │   ├── components/
-│   │   ├── Navbar.js          # Navigation (desktop + mobile)
-│   │   ├── PostCard.js        # Feed post display
-│   │   ├── ShareDialog.js     # File sharing modal
-│   │   ├── MembersList.js     # Group members modal
-│   │   └── AuthGuard.js       # Auth protection wrapper
+│   │   ├── Navbar.js            # Desktop + mobile navigation
+│   │   ├── PostCard.js          # Feed post display
+│   │   ├── ShareDialog.js       # File sharing modal
+│   │   ├── MembersList.js       # Group members modal
+│   │   └── AuthGuard.js         # Auth protection wrapper
 │   ├── lib/
-│   │   ├── authStore.js       # JWT auth, login, signup, authFetch
-│   │   ├── crypto.js          # AES-256-GCM encrypt/decrypt
-│   │   ├── keyManager.js      # RSA key generation & wrapping
-│   │   ├── chunkStore.js      # IndexedDB chunk & key storage
-│   │   ├── upload.js          # Chunked upload logic
-│   │   └── useSocket.js       # Socket.IO hook & device registration
+│   │   ├── authStore.js         # JWT auth + authFetch
+│   │   ├── crypto.js            # AES-256-GCM encrypt/decrypt
+│   │   ├── keyManager.js        # RSA key generation & wrapping
+│   │   ├── chunkStore.js        # IndexedDB storage
+│   │   ├── upload.js            # Chunked upload logic
+│   │   └── useSocket.js         # Socket.IO hook
 │   ├── styles/
-│   │   └── globals.css        # All styles (CSS variables, responsive)
+│   │   └── globals.css          # All styles (CSS variables)
 │   └── public/
-│       └── logo.png           # App logo
+│       ├── logo.png             # App logo
+│       └── screenshots/         # App screenshots
+│
 └── README.md
 ```
 
 ---
 
-## Quick Start (TL;DR)
+<p align="center">
+  <strong>Built with 🔐 by <a href="https://github.com/starrvarse">starrvarse</a></strong>
+</p>
 
-```bash
-# Backend
-cd backend
-npm install
-npx prisma generate
-npx prisma db push
-node server.js
-
-# Frontend (new terminal)
-cd frontend
-npm install
-npm run build
-npm start
-```
-
-Open `http://localhost:3000` — create an account and start sharing.
-
----
-
-## License
-
-This project is for educational and personal use. Use responsibly.
+<p align="center">
+  <sub>This project is open source and available for educational and personal use.</sub>
+</p>
